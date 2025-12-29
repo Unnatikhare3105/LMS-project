@@ -1,19 +1,23 @@
 import React from 'react'
 import { BrowserRouter as AppRouter, Routes as AppRoutes, Route } from 'react-router-dom'
-import Signup from '../features/authentication/Register'
-import Login from '../features/authentication/LoginByPassword'
+import LoginSignup from '../features/authentication/LoginSignup'
 import VerifyOTP from '../features/authentication/VerifyOTP'
 import LoginByOTP from '../features/authentication/LoginByOTP'
+import SyllabusList from '../components/SyllabusList'
+import QuizList from '../components/QuizList'
+import CreateQuiz from '../components/CreateQuiz'
 
 const ProjectRoutes = () => {
   return (
     <AppRouter>
       <AppRoutes>
-        <Route path="/" element={<h1 className="text-3xl font-bold text-center mt-10">Welcome to the Project</h1>} />
-        <Route path="/sign-up" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/verify-otp" element={<VerifyOTP />} />
-        <Route path="/login-by-otp" element={<LoginByOTP />} />
+  <Route path="/" element={<LoginSignup />} />
+  <Route path="/login" element={<LoginSignup />} />
+  <Route path="/verify-otp" element={<VerifyOTP />} />
+  <Route path="/login-by-otp" element={<LoginByOTP />} />
+  <Route path="/syllabus" element={<SyllabusList />} />
+  <Route path="/quizzes" element={<QuizList />} />
+  <Route path="/create-quiz" element={<CreateQuiz />} />
       </AppRoutes>
     </AppRouter>
   )

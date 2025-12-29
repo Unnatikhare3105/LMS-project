@@ -1,70 +1,77 @@
-import config from "../config/config.js";
-import CustomError from "./customError.js";
-import { sendMail } from "./emailService.js";
-import userModels from "../models/user.models.js";
-
-// const client = twilio(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN);
+import { Response } from 'express';
+import config from '@config/config';
+import CustomError from './customError';
+import { sendMail } from './emailService';
+import userModels from '@models/user.models';
 
 export const sendVerificationCode = async (
-  verificationCode,
-  email,
-  verificationMethod,
-  res
-) => {
+  verificationCode: number,
+  email: string,
+  verificationMethod: 'email' | 'sms',
+  res: Response
+): Promise<Response> => {
   try {
-    if (verificationMethod === "email") {
+    if (verificationMethod === 'email') {
       const message = generateEmailTemplate(verificationCode);
-      await sendMail(email, "Verification Code", message);
-      console.log("Email sent successfully");
+      await sendMail(email, 'Verification Code', message);
+      console.log('Email sent successfully');
+      
       return res.status(200).json({
         success: true,
         message: `Verification code sent successfully ${verificationCode}`,
       });
     }
+
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid verification method',
+    });
   } catch (error) {
-    console.log(error);
+    console.error('Error sending verification code:', error);
+    
     return res.status(500).json({
       success: false,
-      message: `Verification code failed to send.${error}`,
+      message: `Verification code failed to send. ${error}`,
     });
   }
 };
 
-export const verifyOTP = async (email, otp) => {
-  // const { email, otp } = req.body;
-
+export const verifyOTP = async (
+  email: string,
+  otp: string
+): Promise<boolean> => {
   try {
-    const userAllEntries = await userModels.find({
-      $or: [
-        {
-          email,
-          accountVerified: false,
-        }
-      ],
-    }).sort({ createdAt: -1 });
+    const userAllEntries = await userModels
+      .find({
+        $or: [
+          {
+            email,
+            accountVerified: false,
+          },
+        ],
+      })
+      .sort({ createdAt: -1 });
 
     if (!userAllEntries.length) {
-      return next(new CustomError("User not found.", 404));
+      throw new CustomError('User not found.', 404);
     }
 
-    let user;
-
-
-      user = userAllEntries[0];
+    const user = userAllEntries[0];
 
     if (user.verificationCode !== Number(otp)) {
-      return next(new ErrorHandler("Invalid OTP.", 400));
+      throw new CustomError('Invalid OTP.', 400);
     }
 
     const currentTime = Date.now();
-
     const verificationCodeExpire = new Date(
       user.verificationCodeExpire
     ).getTime();
-    console.log(currentTime);
-    console.log(verificationCodeExpire);
+
+    console.log('Current time:', currentTime);
+    console.log('Expiry time:', verificationCodeExpire);
+
     if (currentTime > verificationCodeExpire) {
-      return next(new CustomError("OTP Expired.", 400));
+      throw new CustomError('OTP Expired.', 400);
     }
 
     user.accountVerified = true;
@@ -72,14 +79,16 @@ export const verifyOTP = async (email, otp) => {
     user.verificationCodeExpire = null;
     await user.save({ validateModifiedOnly: true });
 
-    // sendToken(user, 200, "Account Verified.", res);
-  } 
-  catch (error) {
-    return new CustomError("Internal Server Error.", 500);
+    return true;
+  } catch (error) {
+    if (error instanceof CustomError) {
+      throw error;
+    }
+    throw new CustomError('Internal Server Error.', 500);
   }
 };
 
-function generateEmailTemplate(verificationCode) {
+function generateEmailTemplate(verificationCode: number): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
       <h2 style="color: #4CAF50; text-align: center;">Verification Code</h2>

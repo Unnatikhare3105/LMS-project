@@ -1,0 +1,8 @@
+2025-12-29T07:15:23.058Z info: Server is running on port 3000
+2025-12-29T07:15:53.117Z error: MongoDB connection error: connect ECONNREFUSED 0.0.0.0:27017
+2025-12-29T07:19:10.442Z info: Server is running on port 3000
+2025-12-29T07:19:11.521Z info: MongoDB connected successfully!
+2025-12-29T07:26:09.392Z info: Server is running on port 3000
+2025-12-29T07:26:10.709Z info: MongoDB connected successfully!
+2025-12-29T07:28:26.517Z info: Server is running on port 3000
+2025-12-29T07:28:27.786Z info: MongoDB connected successfully!

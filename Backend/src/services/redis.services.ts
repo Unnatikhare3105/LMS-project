@@ -1,12 +1,12 @@
 import { createClient } from 'redis';
-import config from '../config/config.js';
+import config from '@config/config';
 
 const redis = createClient({
   password: config.REDIS_PASSWORD,
   socket: {
     host: config.REDIS_HOST,
-    port: config.REDIS_PORT,
-  }
+    port: Number(config.REDIS_PORT),
+  },
 });
 
 redis.on('error', (err) => {
@@ -21,6 +21,5 @@ redis.on('error', (err) => {
     console.error('❌ Redis connection failed:', err);
   }
 })();
-
 
 export default redis;
