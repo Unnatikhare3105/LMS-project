@@ -1,29 +1,27 @@
-// Backend/src/routers/quiz.routes.ts
+//backend/src/routers/quiz.routes.ts
+
 import express from 'express';
+import * as quizController from '../controllers/quiz.controller';
+import { authUser } from '../middlewares/auth.middleware';
+
 const router = express.Router();
-import * as quizController from '@controllers/quiz.controller';
-import { authUser } from 'middlewares/auth.middleware';
 
-router.post(
-  '/generate-questions/:topicId',
-  authUser,
-  quizController.createQuizController
-);
+router.use(authUser);
 
-router.get('/get-all', authUser, quizController.getAllQuizzesController);
+// GET  /api/quiz/leaderboard                   global leaderboard
+// POST /api/quiz/generate/:syllabusId          generate quiz  (syllabusId = UUID)
+// GET  /api/quiz                               all quizzes for user
+// GET  /api/quiz/topic/:syllabusId             quizzes by topic
+// GET  /api/quiz/:quizId                       single quiz    (quizId = UUID)
+// PATCH /api/quiz/:quizId/submit               submit result
+// DELETE /api/quiz/:quizId                     delete quiz
 
-router.get(
-  '/get-by-topic/:topicId',
-  authUser,
-  quizController.getQuizzesByTopicId
-);
-
-router.get('/get-by-id/:quizId', authUser, quizController.getQuizByIdController);
-
-router.delete(
-  '/delete-quiz/:quizId',
-  authUser,
-  quizController.deleteQuizController
-);
+router.get('/leaderboard', quizController.getLeaderboardController);
+router.post('/generate/:syllabusId', quizController.generateQuizController);
+router.get('/', quizController.getAllQuizzesController);
+router.get('/topic/:syllabusId', quizController.getQuizzesByTopicController);
+router.get('/:quizId', quizController.getQuizByIdController);
+router.patch('/:quizId/submit', quizController.submitQuizController);
+router.delete('/:quizId', quizController.deleteQuizController);
 
 export default router;

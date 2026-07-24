@@ -1,39 +1,27 @@
-// Backend/src/routers/syllabus.routes.ts
+//Backend/src/routers/syllabus.routes.ts
+
 import express from 'express';
+import * as syllabusController from '../controllers/syllabus.controller';
+import { authUser } from '../middlewares/auth.middleware';
+
 const router = express.Router();
-import * as syllabusController from '@controllers/syllabus.controller';
-import { authUser } from 'middlewares/auth.middleware';
 
-router.post(
-  '/generateText',
-  authUser,
-  syllabusController.generateContentAsTextController
-);
+router.use(authUser);
 
-router.post(
-  '/generateVideo',
-  authUser,
-  syllabusController.generateContentAsVideoController
-);
+// POST /api/syllabus/generate/text        body: { topic }
+// POST /api/syllabus/generate/video       body: { topic }
+// GET  /api/syllabus                      all topics for user
+// GET  /api/syllabus/:syllabusId          get one (syllabusId = UUID)
+// PUT  /api/syllabus/:syllabusId          update content
+// DELETE /api/syllabus/:syllabusId        delete
 
-router.get('/get-all', authUser, syllabusController.getAllTopicsController);
+router.post('/generate', syllabusController.generateFullController);
 
-router.get(
-  '/get-syllabus/:syllabusId',
-  authUser,
-  syllabusController.getSyllabusByIdController
-);
-
-router.put(
-  '/update-syllabus/:syllabusId',
-  authUser,
-  syllabusController.updateSyllabusController
-);
-
-router.delete(
-  '/delete-syllabus/:syllabusId',
-  authUser,
-  syllabusController.deleteSyllabusController
-);
+router.post('/generate/text', syllabusController.generateTextController);
+router.post('/generate/video', syllabusController.generateVideoController);
+router.get('/', syllabusController.getAllTopicsController);
+router.get('/:syllabusId', syllabusController.getSyllabusByIdController);
+router.put('/:syllabusId', syllabusController.updateSyllabusController);
+router.delete('/:syllabusId', syllabusController.deleteSyllabusController);
 
 export default router;

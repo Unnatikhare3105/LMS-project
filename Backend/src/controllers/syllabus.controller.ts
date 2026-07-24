@@ -1,94 +1,133 @@
-// Backend/src/controllers/syllabus.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import CustomError from '@utils/customError';
-import userModel from '@models/user.models';
-import {
-  deleteSyllabus,
-  generateContentAsText,
-  generateContentAsVideo,
-  getall,
-  getSyllabusById,
-  updateSyllabus,
-} from '@services/syllabus.services';
+//Backend/src/controllers/syllabus.controller.ts
 
-export const generateContentAsTextController = async (
+import { Request, Response, NextFunction } from 'express';
+import CustomError from '../utils/customError';
+import * as syllabusService from '../services/syllabus.service';
+
+export const generateFullController = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
-  const { topic } = req.body;
+): Promise<void> => {
   try {
-    if (!topic) {
-      return next(new CustomError('Topic is required', 400));
+    const { topic } = req.body;
+    if (!topic || typeof topic !== 'string' || !topic.trim()) {
+      return next(new CustomError('Topic is required.', 400));
     }
 
-    const loggedInUser = await userModel
-      .findOne({ email: req.user.email })
-      .select('-password');
-    if (!loggedInUser) {
-      return next(new CustomError('User not found', 404));
-    }
-
-    const content = await generateContentAsText({
-      topic,
-      userId: loggedInUser._id.toString(),
+    const syllabus = await syllabusService.generateFullContent({
+      topic: topic.trim(),
+      userId: req.user.userId,
     });
 
-    if (!content) {
-      return next(new CustomError('No content generated', 404));
-    }
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: 'Content generated successfully',
-      data: content,
+      message: 'Content generated successfully.',
+      data: {
+        syllabusId: syllabus.syllabusId,
+        topic: syllabus.topic,
+        content: syllabus.content,
+        videoLinks: syllabus.videoLinks,
+        referenceLinks: syllabus.referenceLinks,
+        contentType: syllabus.contentType,
+        createdAt: syllabus.createdAt,
+      },
     });
-  } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Internal Server Error',
-      statusCode: 500,
-    });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const generateContentAsVideoController = async (
+export const generateTextController = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
-  const { topic } = req.body;
+): Promise<void> => {
   try {
-    if (!topic) {
-      return next(new CustomError('Topic is required', 400));
+    const { topic } = req.body;
+    if (!topic || typeof topic !== 'string' || !topic.trim()) {
+      return next(new CustomError('Topic is required.', 400));
     }
 
-    const loggedInUser = await userModel
-      .findOne({ email: req.user.email })
-      .select('-password');
-    if (!loggedInUser) {
-      return next(new CustomError('User not found', 404));
-    }
-
-    const content = await generateContentAsVideo({
-      topic,
-      userId: loggedInUser._id.toString(),
+    const syllabus = await syllabusService.generateContentAsText({
+      topic: topic.trim(),
+      userId: req.user.userId,
     });
 
-    if (!content) {
-      return next(new CustomError('No content generated', 404));
-    }
+    // res.status(200).json({
+    //   success: true,
+    //   message: 'Content generated successfully.',
+    //   data: {
+    //     syllabusId: syllabus.syllabusId,
+    //     topic: syllabus.topic,
+    //     content: syllabus.content,
+    //     contentType: syllabus.contentType,
+    //     createdAt: syllabus.createdAt,
+    //   },
+    // });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: 'Content generated successfully',
-      data: content,
+      message: 'Content generated successfully.',
+      data: {
+        syllabusId: syllabus.syllabusId,
+        topic: syllabus.topic,
+        content: syllabus.content,
+        videoLinks: syllabus.videoLinks,
+        referenceLinks: syllabus.referenceLinks,
+        contentType: syllabus.contentType,
+        createdAt: syllabus.createdAt,
+      },
     });
-  } catch (error: any) {
-    console.error('Error generating video content:', error);
-    return next(
-      new CustomError(error.message || 'Internal Server Error', 500)
-    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateVideoController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { topic } = req.body;
+    if (!topic || typeof topic !== 'string' || !topic.trim()) {
+      return next(new CustomError('Topic is required.', 400));
+    }
+
+    const syllabus = await syllabusService.generateContentAsVideo({
+      topic: topic.trim(),
+      userId: req.user.userId,
+    });
+
+    // res.status(200).json({
+    //   success: true,
+    //   message: 'Video links fetched successfully.',
+    //  data: {
+    //     syllabusId: syllabus.syllabusId,
+    //     topic: syllabus.topic,
+    //     videoLinks: syllabus.videoLinks,
+    //     referenceLinks: syllabus.referenceLinks,
+    //     contentType: syllabus.contentType,
+    //     createdAt: syllabus.createdAt,
+    //   },
+    // });
+
+    res.status(200).json({
+      success: true,
+      message: 'Content generated successfully.',
+      data: {
+        syllabusId: syllabus.syllabusId,
+        topic: syllabus.topic,
+        content: syllabus.content,
+        videoLinks: syllabus.videoLinks,
+        referenceLinks: syllabus.referenceLinks,
+        contentType: syllabus.contentType,
+        createdAt: syllabus.createdAt,
+      },
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -96,27 +135,12 @@ export const getAllTopicsController = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
-  const loggedInUser = await userModel
-    .findOne({ email: req.user.email })
-    .select('-password');
-  if (!loggedInUser) {
-    return next(new CustomError('User not found', 404));
-  }
-
+): Promise<void> => {
   try {
-    const topics = await getall({ userId: loggedInUser._id.toString() });
-    if (!topics) {
-      return next(new CustomError('No topics found', 404));
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Topics retrieved successfully',
-      data: topics,
-    });
-  } catch (err: any) {
-    return next(new CustomError(err.message, 500));
+    const topics = await syllabusService.getAllTopics(req.user._id.toString());
+    res.status(200).json({ success: true, data: topics });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -124,27 +148,15 @@ export const getSyllabusByIdController = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
-  const { syllabusId } = req.params;
+): Promise<void> => {
   try {
-    if (!syllabusId) {
-      return next(new CustomError('Syllabus ID is required', 400));
-    }
+    const { syllabusId } = req.params; // UUID
+    if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
 
-    const syllabus = await getSyllabusById({ syllabusId });
-    if (!syllabus) {
-      return next(new CustomError('Syllabus not found', 404));
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Syllabus retrieved successfully',
-      data: syllabus,
-    });
-  } catch (error: any) {
-    return next(
-      new CustomError(error.message || 'Internal Server Error', 500)
-    );
+    const syllabus = await syllabusService.getSyllabusByPublicId(syllabusId, req.user.userId);
+    res.status(200).json({ success: true, data: syllabus });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -152,29 +164,18 @@ export const updateSyllabusController = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
-  const { syllabusId } = req.params;
-  const { content } = req.body;
-
+): Promise<void> => {
   try {
-    if (!syllabusId) {
-      return next(new CustomError('Syllabus ID is required', 400));
-    }
+    const { syllabusId } = req.params; // UUID
+    const { content } = req.body;
 
-    const updatedSyllabus = await updateSyllabus({ syllabusId, content });
-    if (!updatedSyllabus) {
-      return next(new CustomError('Syllabus not found or update failed', 404));
-    }
+    if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
+    if (!content) return next(new CustomError('Content is required.', 400));
 
-    return res.status(200).json({
-      success: true,
-      message: 'Syllabus updated successfully',
-      data: updatedSyllabus,
-    });
-  } catch (error: any) {
-    return next(
-      new CustomError(error.message || 'Internal Server Error', 500)
-    );
+    const updated = await syllabusService.updateSyllabusContent(syllabusId, content, req.user.userId);
+    res.status(200).json({ success: true, message: 'Syllabus updated.', data: updated });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -182,26 +183,14 @@ export const deleteSyllabusController = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
-  const { syllabusId } = req.params;
-
+): Promise<void> => {
   try {
-    if (!syllabusId) {
-      return next(new CustomError('Syllabus ID is required', 400));
-    }
+    const { syllabusId } = req.params; // UUID
+    if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
 
-    const deleted = await deleteSyllabus({ syllabusId });
-    if (!deleted) {
-      return next(new CustomError('Syllabus not found or delete failed', 404));
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Syllabus deleted successfully',
-    });
-  } catch (error: any) {
-    return next(
-      new CustomError(error.message || 'Internal Server Error', 500)
-    );
+    await syllabusService.deleteSyllabus(syllabusId, req.user.userId);
+    res.status(200).json({ success: true, message: 'Syllabus deleted.' });
+  } catch (error) {
+    next(error);
   }
 };

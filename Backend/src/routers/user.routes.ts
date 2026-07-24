@@ -1,24 +1,56 @@
-// Backend/src/routers/user.routes.ts
-import express, { Request, Response, NextFunction } from 'express';
-const router = express.Router();
-import * as userController from '@controllers/user.controller';
+//backend/src/routers/user.routes.ts
 
-router.post('/register', userController.registerUserController);
-router.post('/login-by-password', userController.loginUserByPasswordController);
-router.post('/login-by-otp', userController.loginUserByOTPController);
-router.post('/verify-otp', userController.verifyOTPController);
-router.post('/logout', userController.userLogoutController);
-router.post('/profile', (req: Request, res: Response, next: NextFunction) => {
-  res.status(200).json({
-    success: true,
-    message: 'Profile route is working',
-  });
-});
-router.post('/forgot-password', userController.forgotPasswordByOTPController);
+import express from 'express';
+import * as userController from '../controllers/user.controller';
+import { authUser } from '../middlewares/auth.middleware';
+
+const router = express.Router();
+
+// ─── Public ───────────────────────────────────────────────────────────────────
 router.post(
-  '/verify-forgot-password-otp',
+  '/register',
+  userController.registerController
+);
+router.post(
+  '/login',
+  userController.loginByPasswordController
+);
+router.post(
+  '/login/send-otp',
+  userController.sendOTPController
+);
+router.post(
+  '/login/verify-otp',
+  userController.verifyOTPController
+);
+router.post(
+  '/forgot-password',
+  userController.forgotPasswordController
+);
+router.post(
+  '/forgot-password/verify-otp',
   userController.verifyForgotPasswordOTPController
 );
-router.post('/reset-password', userController.resetPasswordByOTPController);
+router.post(
+  '/reset-password',
+  userController.resetPasswordController
+);
+
+// ─── Protected ────────────────────────────────────────────────────────────────
+router.post(
+  '/logout',
+  authUser,
+  userController.logoutController
+);
+router.get(
+  '/profile',
+  authUser,
+  userController.getProfileController
+);
+router.get(
+  '/activity',
+  authUser,
+  userController.getActivityChartController
+);
 
 export default router;

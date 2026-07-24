@@ -1,12 +1,12 @@
 class CustomError extends Error {
-  success: boolean;
   statusCode: number;
+  success: boolean;
 
-  constructor(message: string, statusCode: number, success: boolean = false) {
+  constructor(message: string, statusCode: number) {
     super(message);
-    this.success = success;
     this.statusCode = statusCode;
-
+    this.success = false;
+    this.name = 'CustomError';
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, CustomError);
     }

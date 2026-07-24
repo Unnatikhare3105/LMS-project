@@ -1,46 +1,36 @@
-// Backend/src/controllers/user.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import CustomError from '@utils/customError';
-import userModels from '@models/user.models';
-import jwt from 'jsonwebtoken';
-import redis from 'services/redis.services';
-import { createUser, loginUser } from 'services/user.services';
-import { sendVerificationCode, verifyOTP } from '@utils/verificationCode';
+//backend/src/controllers/user.controller.ts
 
-export const registerUserController = async (
+import { Request, Response, NextFunction } from 'express';
+import CustomError from '../utils/customError';
+import UserModel from '../models/user.model';
+import jwt from 'jsonwebtoken';
+import * as userService from '../services/user.service';
+import * as userRepo from '../repositories/user.repository';
+import { sendVerificationCode, verifyOTP } from '../utils/verificationCode';
+import logger from '../utils/logger';
+import { redisSet, redisDel } from '@services/redis.service';
+
+// ─── Register ──────────────────────────────────────────────────────────────────
+
+export const registerController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const { username, email, mobile, password } = req.body;
-    console.log(req.body);
 
     if (!username || !email || !mobile || !password) {
       return next(new CustomError('All fields are required.', 400));
     }
 
-    function validatePhoneNumber(mobile: string): boolean {
-      const phoneRegex = /^\+91\d{10}$/;
-      return phoneRegex.test(mobile);
-    }
+    // if (!/^\\d{10}$/.test(mobile)) {
+    //   return next(new CustomError('Invalid phone number. Format: XXXXXXXXXX', 400));
+    // }
 
-    if (!validatePhoneNumber(mobile)) {
-      return next(new CustomError('Invalid phone number.', 400));
-    }
+    const { user, token } = await userService.createUser({ username, email, mobile, password });
 
-    const user = await createUser({
-      email,
-      mobile,
-      password,
-      username,
-    });
-
-    if (!user) {
-      return next(new CustomError('User registration failed.', 500));
-    }
-
-    res.cookie('token', user.token, {
+    res.cookie('token', token, {
       httpOnly: true,
       sameSite: 'none',
       secure: process.env.NODE_ENV === 'production',
@@ -48,37 +38,36 @@ export const registerUserController = async (
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      user: user.user,
-      token: user.token,
+      message: 'User registered successfully.',
+      data: {
+        userId: user.userId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        accountVerified: user.accountVerified,
+      },
+      token,
     });
-  } catch (error: any) {
+  } catch (error) {
+    logger.error("error during the register", error)
     next(error);
   }
 };
 
-export const loginUserByPasswordController = async (
+// ─── Login by password ─────────────────────────────────────────────────────────
+
+export const loginByPasswordController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
-      return next(new CustomError('All fields are required.', 400));
+      return next(new CustomError('Email and password are required.', 400));
     }
 
-    const user = await loginUser({ email, password });
-
-    if (!user) {
-      return next(new CustomError('Invalid credentials.', 401));
-    }
-
-    const token = await user.generateAuthToken();
-    if (!token) {
-      return next(new CustomError('Error generating token.', 500));
-    }
+    const { user, token } = await userService.loginUser({ email, password });
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -88,7 +77,13 @@ export const loginUserByPasswordController = async (
 
     res.status(200).json({
       success: true,
-      message: 'Login successful',
+      message: 'Login successful.',
+      data: {
+        userId: user.userId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
       token,
     });
   } catch (error) {
@@ -96,43 +91,30 @@ export const loginUserByPasswordController = async (
   }
 };
 
-export const loginUserByOTPController = async (
+// ─── Send OTP (login / register flow) ─────────────────────────────────────────
+
+export const sendOTPController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const { email } = req.body;
-    if (!email) {
-      return next(new CustomError('Email is required.', 400));
-    }
+    if (!email) return next(new CustomError('Email is required.', 400));
 
-    const user = await userModels.findOne({ email });
-    if (!user) {
-      return next(new CustomError('User not found.', 404));
-    }
+    const user = await userRepo.findUserByEmail(email);
+    if (!user) return next(new CustomError('User not found.', 404));
 
-    const verificationCode = await userModels.generateVerificationCode();
-
-    const isVerificationCodeSent = await sendVerificationCode(
-      verificationCode,
-      email,
-      'email',
-      res
-    );
-
-    if (!isVerificationCodeSent) {
-      return next(new CustomError('Error sending verification code.', 500));
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Verification code sent successfully.',
-    });
+    const code = UserModel.generateVerificationCode();
+    await userRepo.setVerificationCode(user._id as any, code, 10);
+    await sendVerificationCode(code, email, 'email', res);
   } catch (error) {
+    logger.error("error in login otp", error)
     next(error);
   }
 };
+
+// ─── Verify OTP ────────────────────────────────────────────────────────────────
 
 export const verifyOTPController = async (
   req: Request,
@@ -141,28 +123,17 @@ export const verifyOTPController = async (
 ): Promise<void> => {
   try {
     const { email, otp } = req.body;
-
     if (!email || !otp) {
       return next(new CustomError('Email and OTP are required.', 400));
     }
-    const verificationResult = await verifyOTP(email, otp);
 
-    if (!verificationResult) {
-      return next(new CustomError('Verification failed. Invalid OTP.', 400));
-    }
+    const valid = await verifyOTP(email, otp);
+    if (!valid) return next(new CustomError('Invalid or expired OTP.', 400));
 
-    const user = await userModels.findOne({ email });
-    if (!user) {
-      return next(new CustomError('User not found.', 404));
-    }
+    const user = await UserModel.findOne({ email }).exec();
+    if (!user) return next(new CustomError('User not found.', 404));
 
-    user.accountVerified = true;
-    await user.save();
-
-    const token = await user.generateAuthToken();
-    if (!token) {
-      return next(new CustomError('Error generating token.', 500));
-    }
+    const token = user.generateAuthToken();
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -172,106 +143,113 @@ export const verifyOTPController = async (
 
     res.status(200).json({
       success: true,
-      message: 'OTP verified successfully. Login successful.',
+      message: 'OTP verified. Login successful.',
+      data: {
+        userId: user.userId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
       token,
-      user,
     });
   } catch (error) {
     next(error);
   }
 };
 
-export const userLogoutController = async (
+// ─── Logout ────────────────────────────────────────────────────────────────────
+
+export const logoutController = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
   try {
-    const token = req.cookies.token;
+    const token = (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
     if (!token) {
-      return res.status(400).json({ message: 'No token provided' });
+      return res.status(400).json({ success: false, message: 'No token provided.' });
     }
 
-    const tokenKey = `blacklisted:${token}`;
-    const ttl = await redis.ttl(tokenKey);
+    const blacklistKey = `blacklisted:${token}`;
+    await redisSet(blacklistKey, 'true', 7 * 24 * 60 * 60);
+   
 
-    if (Number(ttl) > 0) {
-      return res.status(400).json({ message: 'Token is already blacklisted' });
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as { exp?: number };
+
+    if (!decoded?.exp) {
+      return res.status(400).json({ success: false, message: 'Invalid token.' });
     }
 
-    if (ttl === -1) {
-      return res
-        .status(400)
-        .json({ message: 'Token found but has no expiry set' });
-    }
+    const ttl = Math.floor((decoded.exp * 1000 - Date.now()) / 1000);
+    if (ttl > 0) await redisSet(blacklistKey, 'true', ttl);
 
-    if (ttl === -2) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-        exp?: number;
-      };
+    res.clearCookie('token', {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+    });
 
-      if (!decoded || !decoded.exp) {
-        return res.status(400).json({ message: 'Invalid token' });
-      }
-      const timeRemaining = decoded.exp * 1000 - Date.now();
-      await redis.set(tokenKey, 'true', {
-        EX: Math.floor(timeRemaining / 1000)
-      });
-
-      res.clearCookie('token', {
-        httpOnly: true,
-        sameSite: 'none',
-        secure: process.env.NODE_ENV === 'production',
-      });
-
-      return res.status(200).json({ message: 'User logout successful' });
-    }
-
-    return res.status(500).json({ message: 'Unexpected error' });
+    return res.status(200).json({ success: true, message: 'Logged out successfully.' });
   } catch (error: any) {
-    console.error(error);
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const forgotPasswordByOTPController = async (
+// ─── Get profile ───────────────────────────────────────────────────────────────
+
+export const getProfileController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const user = await userService.getUserProfile(req.user._id.toString());
+    res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Activity chart (GitHub-style) ────────────────────────────────────────────
+
+export const getActivityChartController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const data = await userService.getActivityChart(req.user._id.toString());
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Forgot password – send OTP ────────────────────────────────────────────────
+
+export const forgotPasswordController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const { email } = req.body;
+    if (!email) return next(new CustomError('Email is required.', 400));
 
-    if (!email) {
-      return next(new CustomError('Email is required.', 400));
-    }
+    const user = await userRepo.findUserByEmail(email);
+    if (!user) return next(new CustomError('User not found.', 404));
 
-    const user = await userModels.findOne({ email });
-    if (!user) {
-      return next(new CustomError('User not found.', 404));
-    }
-
-    const otp = await userModels.generateVerificationCode();
-    if (!otp) {
-      return next(new CustomError('Error generating OTP.', 500));
-    }
-    const isSent = await sendVerificationCode(
-      otp,
-      email,
-      'email',
-      res
-    );
-    if (!isSent) {
-      return next(new CustomError('Error sending OTP.', 500));
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'OTP sent to email for password reset.',
-    });
+    const code = UserModel.generateVerificationCode();
+    await userRepo.setVerificationCode(user._id as any, code, 10);
+    await sendVerificationCode(code, email, 'email', res);
   } catch (error) {
     next(error);
   }
 };
+
+// ─── Forgot password – verify OTP ─────────────────────────────────────────────
 
 export const verifyForgotPasswordOTPController = async (
   req: Request,
@@ -280,63 +258,62 @@ export const verifyForgotPasswordOTPController = async (
 ): Promise<void> => {
   try {
     const { email, otp } = req.body;
-
     if (!email || !otp) {
+      console.log("Email or OTP missing in request body");
       return next(new CustomError('Email and OTP are required.', 400));
     }
 
-    const isValid = await verifyOTP(email, otp);
-    if (!isValid) {
-      return next(new CustomError('Invalid or expired OTP.', 400));
-    }
+    const valid = await verifyOTP(email, otp);
+    if (!valid) {
+      console.log("OTP verification failed for email:", email);
+      return next(new CustomError('Invalid or expired OTP.', 400));}
 
-    await redis.set(`reset-allowed:${email}`, 'true', { 'EX': 10 * 60 }); // 10 minutes
+    // Allow password reset for 10 minutes
+    // await redis.set(`reset-allowed:${email}`, 'true', { EX: 10 * 60 });
+    await redisSet(`reset-allowed:${email}`, 'true', 10 * 60);
+
+    console.log("OTP verified successfully for email:", email);
 
     res.status(200).json({
       success: true,
-      message: 'OTP verified. You can now reset your password.',
+      message: 'OTP verified. You may now reset your password.',
     });
   } catch (error) {
+    console.log("Error during OTP verification:", error);
+    res.status(500).json({ success: false, message: `Internal server error. ${error}` });
     next(error);
   }
 };
 
-export const resetPasswordByOTPController = async (
+// ─── Forgot password – reset password ─────────────────────────────────────────
+
+export const resetPasswordController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const { email, newPassword } = req.body;
-
     if (!email || !newPassword) {
       return next(new CustomError('Email and new password are required.', 400));
     }
 
-    const allowed = await redis.get(`reset-allowed:${email}`);
-    if (!allowed) {
-      return next(
-        new CustomError(
-          'OTP verification required before resetting password.',
-          400
-        )
-      );
-    }
+    // const allowed = await redis.get(`reset-allowed:${email}`);
 
-    const user = await userModels.findOne({ email });
-    if (!user) {
-      return next(new CustomError('User not found.', 404));
-    }
+    await redisDel(`reset-allowed:${email}`);
+    // if (!allowed) {
+    //   return next(new CustomError('OTP verification required before resetting password.', 403));
+    // }
 
-    user.password = await userModels.hashPassword(newPassword);
-    await user.save();
+    const hashed = await UserModel.hashPassword(newPassword);
+    const user = await userRepo.updatePassword(email, hashed);
+    if (!user) return next(new CustomError('User not found.', 404));
 
-    await redis.del(`reset-allowed:${email}`);
+    await redisDel(`reset-allowed:${email}`);
 
-    const token = await user.generateAuthToken();
-    if (!token) {
-      return next(new CustomError('Error generating token.', 500));
-    }
+    const fullUser = await UserModel.findById((user as any)._id).exec();
+    if (!fullUser) return next(new CustomError('User not found.', 404));
+    const token = fullUser.generateAuthToken();
 
     res.cookie('token', token, {
       httpOnly: true,
@@ -344,11 +321,7 @@ export const resetPasswordByOTPController = async (
       secure: process.env.NODE_ENV === 'production',
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Password reset successfully.',
-      token,
-    });
+    res.status(200).json({ success: true, message: 'Password reset successfully.', token });
   } catch (error) {
     next(error);
   }

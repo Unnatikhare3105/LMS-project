@@ -1,11 +1,7 @@
-// Backend/src/middlewares/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
-import config from '@config/config';
-import userModel from '@models/user.models';
-import redis from 'services/redis.services';
-// import redisClient from "@services/redis.service";
+import UserModel from '../models/user.model';
+import { getRedis } from '@services/redis.service';
 
-// Extend Express Request to include user property
 declare global {
   namespace Express {
     interface Request {
@@ -18,35 +14,78 @@ export const authUser = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
+
   try {
-    const token =
-      req.cookies.token ||
-      (req.headers.authorization &&
-        req.headers.authorization.split(' ')[1]);
+   const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null;
+
+    console.log('token found:', !!token); // should log true
 
     if (!token) {
-      return res.status(401).send({ error: 'Unauthorized User' });
+      res.status(401).json({ success: false, message: 'User not found.' }); // token hi nahi to seedha reject
+      return;
     }
 
-    const isBlackListed = await redis.get(`bl_${token}`);
+    const isBlacklisted = await getRedis().get(`blacklisted:${token}`);
 
-    if (isBlackListed) {
-      res.cookie('token', '');
-      return res.status(401).send({ error: 'Unauthorized User' });
+    if (isBlacklisted) {
+      res.clearCookie('token');
+      res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
+      return;
     }
+    console.log('blacklist check passed'); // if redis was the issue, this won't log
 
-    const decoded: any = await userModel.verifyAuthToken(token);
-    const user = await userModel.findById(decoded._id).select('-password');
+    const decoded: any = UserModel.verifyAuthToken(token);
+    console.log('decoded:', decoded); // confirm JWT decodes correctly
+
+
+    // try {
+    //   const token =
+    //     req.cookies?.token ||
+    //     (req.headers.authorization?.startsWith('Bearer ')
+    //       ? req.headers.authorization.split(' ')[1]
+    //       : null);
+
+    //   if (!token) {
+    //     res.status(401).json({ success: false, message: 'Unauthorized. No token provided.' });
+    //     return;
+    //   }
+
+    //   // Check Redis blacklist (O(1) lookup – scales well)
+    //   // const isBlacklisted = await redis.get(`blacklisted:${token}`);
+    //   const isBlacklisted = await getRedis().get(`blacklisted:${token}`);
+    //   if (isBlacklisted) {
+    //     res.clearCookie('token');
+    //     res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
+    //     return;
+    //   }
+
+    //   const decoded: any = UserModel.verifyAuthToken(token);
+
+
+
+    const user = await UserModel.findById(decoded._id).select('-password').lean().exec();
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(401).json({ success: false, message: 'User not found.' });
+      return;
     }
 
     req.user = user;
     next();
   } catch (error: any) {
-    console.log(error);
-    res.status(401).send({ error: 'Unauthorized User' });
+    res.status(401).json({ success: false, message: 'Invalid or expired token.' });
   }
+};
+
+// ─── Role guard ────────────────────────────────────────────────────────────────
+
+export const requireRole = (...roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      res.status(403).json({ success: false, message: 'Forbidden. Insufficient permissions.' });
+      return;
+    }
+    next();
+  };
 };

@@ -1,0 +1,6 @@
+{
+  "watch": ["Backend/src", "Frontend/src"],
+  "ext": "ts,tsx,js,jsx",
+  "ignore": ["node_modules", "dist", "build"],
+  "exec": "npm run dev"
+}

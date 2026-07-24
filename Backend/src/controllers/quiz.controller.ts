@@ -1,93 +1,92 @@
-// Backend/src/controllers/quiz.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import quizModel from '@models/quiz.model';
-import syllabusModel from '@models/syllabus.model';
-import userModel from '@models/user.models';
-import CustomError from '@utils/customError';
-import {
-  generateQuestions,
-  getAllQuizzesByID
-} from '@services/quiz.services';
+//backend/src/controllers/quiz.controller.ts
 
-export const createQuizController = async (
+import { Request, Response, NextFunction } from 'express';
+import CustomError from '../utils/customError';
+import * as quizService from '../services/quiz.service';
+import * as syllabusRepo from '../repositories/syllabus.repository';
+import { DifficultyLevel } from '../types';
+
+const VALID_DIFFICULTIES: DifficultyLevel[] = ['beginner', 'intermediate', 'advanced'];
+
+export const generateQuizController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { numQuestions } = req.body;
-    const { topicId } = req.params;
+    const { syllabusId } = req.params; // UUID
+    const { numQuestions, difficulty } = req.body;
 
-    if (!topicId) {
-      return next(new CustomError('Topic ID is required.', 400));
+    if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
+
+    if (!numQuestions || typeof numQuestions !== 'number' || numQuestions < 1 || numQuestions > 30) {
+      return next(new CustomError('numQuestions must be between 1 and 30.', 400));
     }
-    if (!numQuestions) {
+
+    if (!difficulty || !VALID_DIFFICULTIES.includes(difficulty)) {
       return next(
-        new CustomError('Number of questions must be a positive integer.', 400)
+        new CustomError(`difficulty must be one of: ${VALID_DIFFICULTIES.join(', ')}.`, 400)
       );
     }
 
-    const topicDoc = await syllabusModel.findById(topicId);
-    if (!topicDoc || !topicDoc.topic) {
-      return next(new CustomError('Topic not found for the given ID.', 404));
-    }
-    const topic = topicDoc.topic;
+    const syllabus = await syllabusRepo.findSyllabusBySyllabusId(syllabusId);
+    if (!syllabus) return next(new CustomError('Topic not found.', 404));
 
-    if (!req.user || !req.user.email) {
-      return next(
-        new CustomError('User information not found in request.', 401)
-      );
-    }
-
-    const loggedInUser = await userModel
-      .findOne({ email: req.user.email })
-      .select('-password');
-    if (!loggedInUser) {
-      return next(new CustomError('User not found', 404));
-    }
-
-    const questionsData: any = await generateQuestions({
-      userId: loggedInUser._id.toString(),
-      topicId,
-      topicName: topic,
+    const quiz = await quizService.generateQuiz({
+      userId: req.user.userId,
+      topicPublicId: syllabusId,
+      topicName: syllabus.topic,
       numQuestions,
+      difficulty,
     });
-
-    console.log('questionsData:', questionsData);
-
-    // Safe way to extract questions – no more TypeScript errors!
-    let questionsArr: any[] = [];
-
-    if (questionsData) {
-      // Case 1: questionsData.questions is direct array
-      if (Array.isArray(questionsData.questions)) {
-        questionsArr = questionsData.questions;
-      }
-      // Case 2: questionsData.questions.questions is the array (nested)
-      else if (
-        questionsData.questions &&
-        Array.isArray(questionsData.questions.questions)
-      ) {
-        questionsArr = questionsData.questions.questions;
-      }
-      // Case 3: questionsData itself is the array
-      else if (Array.isArray(questionsData)) {
-        questionsArr = questionsData;
-      }
-    }
-
-    if (questionsArr.length === 0) {
-      return next(new CustomError('Failed to generate questions. Please try again.', 500));
-    }
 
     res.status(201).json({
       success: true,
-      questions: questionsArr,
+      message: 'Quiz generated successfully.',
+      data: {
+        quizId: quiz.quizId,
+        topic: quiz.topic,
+        difficulty: quiz.difficulty,
+        totalQuestions: quiz.totalQuestions,
+        questions: quiz.questions,
+        createdAt: quiz.createdAt,
+      },
     });
+  } catch (error) {
+    next(error);
+  }
+};
 
-  } catch (error: any) {
-    console.error('Error in createQuizController:', error);
-    next(new CustomError(error.message || 'Internal Server Error', 500));
+export const submitQuizController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { quizId } = req.params; // UUID
+    const { score, timeTakenSeconds } = req.body;
+
+    if (!quizId) return next(new CustomError('Quiz ID is required.', 400));
+    if (score === undefined || score === null) return next(new CustomError('Score is required.', 400));
+    if (!timeTakenSeconds) return next(new CustomError('timeTakenSeconds is required.', 400));
+
+    const quiz = await quizService.submitQuiz(quizId, Number(score), Number(timeTakenSeconds), req.user.userId);
+    res.status(200).json({
+      success: true,
+      message: 'Quiz submitted.',
+      data: {
+        quizId: quiz.quizId,
+        topic: quiz.topic,
+        difficulty: quiz.difficulty,
+        score: quiz.score,
+        totalQuestions: quiz.totalQuestions,
+        timeTakenSeconds: quiz.timeTakenSeconds,
+        completedAt: quiz.completedAt,
+        questions: quiz.questions,
+      },
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -97,72 +96,26 @@ export const getAllQuizzesController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const loggedInUser = await userModel
-      .findOne({ email: req.user.email })
-      .select('-password');
-    if (!loggedInUser) {
-      return next(new CustomError('User not found', 404));
-    }
-
-    const quizzes = await getAllQuizzesByID({
-      userId: loggedInUser._id.toString(),
-    });
-    if (!quizzes || quizzes.length === 0) {
-      return next(new CustomError('No quizzes found for the user.', 404));
-    }
-
-    res.status(200).json({
-      success: true,
-      quizzes,
-    });
-  } catch (error: any) {
-    console.error('Error in getAllQuizzesController:', error);
-    next(new CustomError(error.message || 'Internal Server Error', 500));
+    const quizzes = await quizService.getAllQuizzes(req.user.userId);
+    res.status(200).json({ success: true, data: quizzes });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getQuizzesByTopicId = async (
+export const getQuizzesByTopicController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const { topicId } = req.params;
-
-  if (!topicId) {
-    return next(new CustomError('Topic ID is required.', 400));
-  }
-
   try {
-    const loggedInUser = await userModel
-      .findOne({ email: req.user?.email })
-      .select('-password');
+    const { syllabusId } = req.params; // UUID
+    if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
 
-    if (!loggedInUser) {
-      return next(new CustomError('User not found', 404));
-    }
-
-    // Direct query: topicId से syllabus ढूंढो, फिर उसका topic use करके quizzes
-    const syllabus = await syllabusModel.findById(topicId);
-    if (!syllabus) {
-      return next(new CustomError('Topic not found', 404));
-    }
-
-    const quizzes = await quizModel.find({
-      userId: loggedInUser._id,
-      topic: syllabus.topic  // या जो field match करता हो
-    });
-
-    if (!quizzes || quizzes.length === 0) {
-      return next(new CustomError('No quizzes found for this topic.', 404));
-    }
-
-    res.status(200).json({
-      success: true,
-      quizzes,
-    });
-
-  } catch (error: any) {
-    next(new CustomError(error.message || 'Internal Server Error', 500));
+    const quizzes = await quizService.getQuizzesByTopic(syllabusId);
+    res.status(200).json({ success: true, data: quizzes });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -171,31 +124,28 @@ export const getQuizByIdController = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const { quizId } = req.params;
-  if (!quizId) {
-    return next(new CustomError('Quiz ID is required.', 400));
-  }
-
   try {
-    const loggedInUser = await userModel
-      .findOne({ email: req.user.email })
-      .select('-password');
-    if (!loggedInUser) {
-      return next(new CustomError('User not found', 404));
-    }
+    const { quizId } = req.params; // UUID
+    if (!quizId) return next(new CustomError('Quiz ID is required.', 400));
 
-    const quiz = await quizModel.findById(quizId).populate('userId', '-password');
-    if (!quiz) {
-      return next(new CustomError('Quiz not found for the given ID.', 404));
-    }
+    const quiz = await quizService.getQuizByPublicId(quizId, req.user.userId);
+    res.status(200).json({ success: true, data: quiz });
+  } catch (error) {
+    next(error);
+  }
+};
 
-    res.status(200).json({
-      success: true,
-      quiz,
-    });
-  } catch (error: any) {
-    console.error('Error in getQuizByIdController:', error);
-    next(new CustomError(error.message || 'Internal Server Error', 500));
+export const getLeaderboardController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 10, 50);
+    const leaderboard = await quizService.getLeaderboard(limit);
+    res.status(200).json({ success: true, data: leaderboard });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -204,30 +154,13 @@ export const deleteQuizController = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const { quizId } = req.params;
-  if (!quizId) {
-    return next(new CustomError('Quiz ID is required.', 400));
-  }
-
   try {
-    const loggedInUser = await userModel
-      .findOne({ email: req.user.email })
-      .select('-password');
-    if (!loggedInUser) {
-      return next(new CustomError('User not found', 404));
-    }
+    const { quizId } = req.params; // UUID
+    if (!quizId) return next(new CustomError('Quiz ID is required.', 400));
 
-    const deletedQuiz = await quizModel.findByIdAndDelete(quizId);
-    if (!deletedQuiz) {
-      return next(new CustomError('Quiz not found or already deleted.', 404));
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Quiz deleted successfully.',
-    });
-  } catch (error: any) {
-    console.error('Error in deleteQuizController:', error);
-    next(new CustomError(error.message || 'Internal Server Error', 500));
+    await quizService.deleteQuiz(quizId, req.user.userId);
+    res.status(200).json({ success: true, message: 'Quiz deleted.' });
+  } catch (error) {
+    next(error);
   }
 };

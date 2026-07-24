@@ -1,58 +1,184 @@
 // Backend/src/models/quiz.model.ts
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Document, Model, Schema } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
+import { DifficultyLevel } from '../types';
+
+// ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface IQuestion {
   question: string;
   options: string[];
   answer: string;
+  explanation: string;
 }
 
 export interface IQuiz extends Document {
-  userId: mongoose.Types.ObjectId;
+  quizId: string;
+  userId: string;
+  syllabusId: string;
   topic: string;
+  difficulty: DifficultyLevel;
   questions: IQuestion[];
+  totalQuestions: number;
+  score: number | null;
+  timeTakenSeconds: number | null;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
-const quizSchema = new mongoose.Schema<IQuiz>(
+
+export interface IQuizModel extends Model<IQuiz> { }
+
+// ─── Sub-schema ───────────────────────────────────────────────────────────────
+
+const questionSchema = new Schema<IQuestion>(
   {
+    question: { type: String, required: true },
+    options: [{ type: String, required: true }],
+    answer: { type: String, required: true },
+    explanation: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
+// ─── Main schema ──────────────────────────────────────────────────────────────
+
+const quizSchema = new Schema<IQuiz, IQuizModel>(
+  {
+    quizId: {
+      type: String,
+      default: () => uuidv4(),
+      unique: true,
+      index: true,
+    },
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: 'User',
       required: true
     },
+    syllabusId: {
+      type: String,
+      ref: 'Syllabus',
+      required: true
+    },
+
     topic: {
       type: String,
       required: true,
       trim: true
     },
-    questions: [
-      {
-        question: { 
-          type: String, 
-          required: true 
-        },
-        options: [{ 
-          type: String, 
-          required: true 
-        }],
-        answer: { 
-          type: String, 
-          required: true 
-        }
-      }
-    ]
+
+    difficulty: {
+      type: String,
+
+      enum: ['beginner',
+        'intermediate',
+        'advanced'],
+
+      default: 'beginner',
+
+    },
+
+    questions: {
+      type: [questionSchema],
+      required: true
+    },
+
+    totalQuestions: {
+      type: Number,
+      required: true
+    },
+
+    score: {
+      type: Number,
+      default: null
+    },
+
+    timeTakenSeconds: {
+      type: Number,
+      default: null
+    },
+
+    completedAt: {
+      type: Date,
+      default: null
+    },
+
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
-// Database Indexes for better query performance
-quizSchema.index({ userId: 1 }); // Find quizzes by user
-quizSchema.index({ topic: 1 }); // Find quizzes by topic (string search)
-quizSchema.index({ userId: 1, topic: 1 }); // Compound index
-quizSchema.index({ topic: 'text' }); // Text search on topic
-quizSchema.index({ createdAt: -1 }); // Sort by newest
+// ─── Indexes ──────────────────────────────────────────────────────────────────
 
-const QuizModel = mongoose.model<IQuiz>('Quiz', quizSchema);
+quizSchema.index({ userId: 1 });
+quizSchema.index({ syllabusId: 1 });
+quizSchema.index({ userId: 1, syllabusId: 1 });
+quizSchema.index({ difficulty: 1 });
+quizSchema.index({ score: -1 });
+quizSchema.index({ createdAt: -1 });
 
+// ─── Export ───────────────────────────────────────────────────────────────────
+
+const QuizModel = mongoose.model<IQuiz, IQuizModel>('Quiz', quizSchema);
 export default QuizModel;
+
+
+
+
+// import mongoose, { Document } from 'mongoose';
+
+// export interface IQuestion {
+//   question: string;
+//   options: string[];
+//   answer: string;
+// }
+
+// export interface IQuiz extends Document {
+//   userId: mongoose.Types.ObjectId;
+//   topic: string;
+//   questions: IQuestion[];
+// }
+// const quizSchema = new mongoose.Schema<IQuiz>(
+//   {
+//     userId: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: 'User',
+//       required: true
+//     },
+//     topic: {
+//       type: String,
+//       required: true,
+//       trim: true
+//     },
+//     questions: [
+//       {
+//         question: {
+//           type: String,
+//           required: true
+//         },
+//         options: [{
+//           type: String,
+//           required: true
+//         }],
+//         answer: {
+//           type: String,
+//           required: true
+//         }
+//       }
+//     ]
+//   },
+//   {
+//     timestamps: true
+//   }
+// );
+
+// // Database Indexes for better query performance
+// quizSchema.index({ userId: 1 }); // Find quizzes by user
+// quizSchema.index({ topic: 1 }); // Find quizzes by topic (string search)
+// quizSchema.index({ userId: 1, topic: 1 }); // Compound index
+// quizSchema.index({ topic: 'text' }); // Text search on topic
+// quizSchema.index({ createdAt: -1 }); // Sort by newest
+
+// const QuizModel = mongoose.model<IQuiz>('Quiz', quizSchema);
+
+// export default QuizModel;
