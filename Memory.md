@@ -23,3 +23,5 @@ This workspace contains an AI-powered LMS project built with:
 - Preserve existing routes, services, and naming conventions.
 - Validate new features against the current backend/frontend patterns.
 - When adding new features, update this file with progress so future agents retain context.
+
+

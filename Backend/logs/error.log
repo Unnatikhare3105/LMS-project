@@ -2290,3 +2290,17 @@ Error: getaddrinfo ENOTFOUND redis-14611.c92.us-east-1-3.ec2.cloud.redislabs.com
 2026-07-24 00:11:08 [error]: [GET] /api/syllabus/bed867ad-ea17-4867-94c8-054b9ddce38c → Forbidden.
 2026-07-24 00:11:12 [error]: [GET] /api/syllabus/92c6626e-16e7-48aa-a42a-2ac338f834a2 → Forbidden.
 2026-07-24 00:11:13 [error]: [GET] /api/syllabus/92c6626e-16e7-48aa-a42a-2ac338f834a2 → Forbidden.
+2026-07-25 00:27:16 [error]: [GET] /api/syllabus → No topics found.
+2026-07-25 00:27:16 [error]: [GET] /api/quiz → No quizzes found.
+2026-07-25 00:27:17 [error]: [GET] /api/syllabus → No topics found.
+2026-07-25 00:27:17 [error]: [GET] /api/quiz → No quizzes found.
+2026-07-25 00:27:27 [error]: [GET] /api/syllabus → No topics found.
+2026-07-25 00:27:28 [error]: [GET] /api/syllabus → No topics found.
+2026-07-25 00:27:35 [error]: [GET] /api/quiz → No quizzes found.
+2026-07-25 00:27:35 [error]: [GET] /api/quiz → No quizzes found.
+2026-07-25 00:27:39 [error]: [GET] /api/quiz → No quizzes found.
+2026-07-25 00:27:39 [error]: [GET] /api/syllabus → No topics found.
+2026-07-25 00:27:39 [error]: [GET] /api/quiz → No quizzes found.
+2026-07-25 00:27:39 [error]: [GET] /api/syllabus → No topics found.
+2026-07-25 00:27:53 [error]: [GET] /api/syllabus → No topics found.
+2026-07-25 00:27:53 [error]: [GET] /api/syllabus → No topics found.

@@ -84,3 +84,5 @@ This product solves that by combining AI-generated syllabus content, quizzes, bo
 - Payment or subscription system
 - Advanced analytics dashboards
 - Multi-tenant admin portal
+
+
