@@ -54,18 +54,6 @@ export const generateTextController = async (
       userId: req.user.userId,
     });
 
-    // res.status(200).json({
-    //   success: true,
-    //   message: 'Content generated successfully.',
-    //   data: {
-    //     syllabusId: syllabus.syllabusId,
-    //     topic: syllabus.topic,
-    //     content: syllabus.content,
-    //     contentType: syllabus.contentType,
-    //     createdAt: syllabus.createdAt,
-    //   },
-    // });
-
     res.status(200).json({
       success: true,
       message: 'Content generated successfully.',
@@ -99,19 +87,6 @@ export const generateVideoController = async (
       topic: topic.trim(),
       userId: req.user.userId,
     });
-
-    // res.status(200).json({
-    //   success: true,
-    //   message: 'Video links fetched successfully.',
-    //  data: {
-    //     syllabusId: syllabus.syllabusId,
-    //     topic: syllabus.topic,
-    //     videoLinks: syllabus.videoLinks,
-    //     referenceLinks: syllabus.referenceLinks,
-    //     contentType: syllabus.contentType,
-    //     createdAt: syllabus.createdAt,
-    //   },
-    // });
 
     res.status(200).json({
       success: true,
@@ -150,7 +125,7 @@ export const getSyllabusByIdController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { syllabusId } = req.params; // UUID
+    const { syllabusId } = req.params;
     if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
 
     const syllabus = await syllabusService.getSyllabusByPublicId(syllabusId, req.user.userId);
@@ -166,7 +141,7 @@ export const updateSyllabusController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { syllabusId } = req.params; // UUID
+    const { syllabusId } = req.params;
     const { content } = req.body;
 
     if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
@@ -185,7 +160,7 @@ export const deleteSyllabusController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { syllabusId } = req.params; // UUID
+    const { syllabusId } = req.params;
     if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
 
     await syllabusService.deleteSyllabus(syllabusId, req.user.userId);

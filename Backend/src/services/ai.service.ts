@@ -7,7 +7,6 @@ import CustomError from '../utils/customError';
 import { DifficultyLevel, IQuestionRaw } from '../types';
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-// Groq exposes an OpenAI-compatible API — same SDK, different baseURL + key.
 
 const ai = new OpenAI({
   apiKey: config.groq_api_key,
@@ -64,7 +63,7 @@ Be accurate, beginner-friendly, and use examples. Use proper markdown formatting
     if (!text) throw new CustomError('Empty AI response.', 500);
     return text;
   } catch (error: any) {
-    console.log('Error generating explanation:', error); // Debug log for AI errors
+    
     if (error instanceof CustomError) throw error;
     throw new CustomError('Failed to generate explanation.', 500);
   }
@@ -98,7 +97,7 @@ export const getVideoLinks = async (
       order: 'relevance',
     });
 
-    console.log(`ai service: Fetched ${response.data.items?.length || 0} YouTube results for topic: "${topic}"`); // Debug log
+    
 
     const items = response.data.items || [];
     return items
@@ -110,7 +109,7 @@ export const getVideoLinks = async (
         thumbnail: item.snippet.thumbnails?.medium?.url || '',
       }));
   } catch (error: any) {
-    console.log('Error fetching YouTube videos:', error); // Debug log for YouTube API errors
+    
     throw new CustomError('Failed to fetch YouTube videos.', 500);
   }
 };
@@ -124,7 +123,7 @@ export interface IReferenceLink {
 }
 
 export const getReferenceLinks = async (topic: string): Promise<IReferenceLink[]> => {
-  console.log(`ai service: Generating reference links for topic: "${topic}"`); // Debug log
+  
   
   const prompt = `
 Suggest 5-6 high-quality reference links for learning and practicing: "${topic}"
@@ -152,7 +151,7 @@ Use only real, well-known URLs (e.g. en.wikipedia.org, leetcode.com, geeksforgee
       })
     );
 
-    console.log('ai service: Raw AI response for reference links:', response.choices[0]?.message?.content); // Debug log
+    
 
     const raw = response.choices[0]?.message?.content || '';
 
@@ -167,8 +166,8 @@ Use only real, well-known URLs (e.g. en.wikipedia.org, leetcode.com, geeksforgee
       }))
       .filter((r) => r.title && r.url);
   } catch (error) {
-    console.log('Error generating reference links:', error);
-    return []; // non-fatal — video links can still succeed without these
+    
+    return [];
   }
 };
 
@@ -224,8 +223,6 @@ Respond ONLY with a valid JSON array. No markdown, no preamble, just the array:
       .map(sanitizeQuestion)
       .filter((q): q is IQuestionRaw => q !== null);
 
-    // At scale, a handful of malformed questions shouldn't fail the whole
-    // request — only fail if too few survived to be usable.
     const minRequired = Math.max(1, Math.ceil(numQuestions * 0.6));
     if (validQuestions.length < minRequired) {
       console.warn(
@@ -257,17 +254,15 @@ const extractJsonArray = (raw: string): any[] | null => {
   let text = raw.trim();
   text = text.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
 
-  // Direct parse first — cheapest path, works most of the time.
   try {
     const parsed = JSON.parse(text);
     if (Array.isArray(parsed)) return parsed;
   } catch {
     // fall through to bracket-matching below
+
   }
 
-  // Fallback: find the first '[' and its matching ']' and parse just that slice —
-  // handles cases where the model adds stray text before/after the array.
-  const start = text.indexOf('[');
+   const start = text.indexOf('[');
   const end = text.lastIndexOf(']');
   if (start !== -1 && end !== -1 && end > start) {
     try {
@@ -337,7 +332,7 @@ export const checkGroqConnection = async (): Promise<boolean> => {
   try {
     const models = await ai.models.list();
     const count = models.data?.length ?? 0;
-    console.log(`✅ Groq initialized successfully — ${count} models available.`);
+    
     return true;
   } catch (error: any) {
     const status = error?.status || error?.response?.status;

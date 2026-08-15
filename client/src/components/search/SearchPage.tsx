@@ -87,28 +87,7 @@ export default function SearchPage() {
     }
   };
 
-  // const handleSearch = async () => {
-  //   if (!query.trim()) { toast.error('Enter a topic to search.'); return; }
 
-  //   const existing = topics.find((t) => t.topic.toLowerCase() === query.toLowerCase().trim());
-  //   if (existing) {
-  //     setSelected(existing);
-  //     toast.success('Topic found in your library!');
-  //     return;
-  //   }
-
-  //   setSearching(true);
-  //   const action = activeTab === 'video' ? generateVideoContentThunk : generateTextContentThunk;
-  //   const res = await dispatch(action(query.trim()));
-  //   setSearching(false);
-
-  //   if (action.fulfilled.match(res)) {
-  //     setSelected(res.payload.data);
-  //     toast.success('Content generated!');
-  //   } else {
-  //     toast.error(res.payload as string || 'Failed to generate content.');
-  //   }
-  // };
 
   const toggleBookmark = async (syllabusId: string) => {
     const existing = bookmarks.find((b) => b.syllabusId === syllabusId);
@@ -135,12 +114,6 @@ export default function SearchPage() {
     }
   };
 
-  // const handleTakeQuiz = (s: ISyllabus) => {
-  //   // Use mock quiz for demo
-  //   const q = mockQuizzes[0];
-  //   dispatch(setCurrentQuiz({ ...q, topic: s.topic }));
-  //   toast.success('Quiz ready! Go to My Quizzes.');
-  // };
 
   const displaySyllabus = selected || currentSyllabus;
 
@@ -221,10 +194,7 @@ export default function SearchPage() {
                       className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                       title="Bookmark"
                     >
-                      {/* {bookmarked.has(displaySyllabus.syllabusId)
-                        ? <BookmarkCheck className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                        : <Bookmark className="w-4 h-4 text-neutral-400" />} */}
-
+                  
                       {bookmarks.some((b) => b.syllabusId === displaySyllabus.syllabusId)
                         ? <BookmarkCheck className="w-4 h-4 text-violet-600 dark:text-violet-400" />
                         : <Bookmark className="w-4 h-4 text-neutral-400" />}

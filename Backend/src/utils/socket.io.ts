@@ -13,8 +13,6 @@ function initSocket(server: HTTPServer): Server {
       origin: process.env.CLIENT_URL || 'http://localhost:5173',
       credentials: true,
     },
-    // Scalability: enable adapter here for multi-server with Redis
-    // adapter: createAdapter(pubClient, subClient)
     pingTimeout: 60000,
     pingInterval: 25000,
   });

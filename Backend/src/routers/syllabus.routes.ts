@@ -8,20 +8,26 @@ const router = express.Router();
 
 router.use(authUser);
 
-// POST /api/syllabus/generate/text        body: { topic }
-// POST /api/syllabus/generate/video       body: { topic }
-// GET  /api/syllabus                      all topics for user
-// GET  /api/syllabus/:syllabusId          get one (syllabusId = UUID)
-// PUT  /api/syllabus/:syllabusId          update content
-// DELETE /api/syllabus/:syllabusId        delete
-
+// POST /api/syllabus/generate             body: { topic }
 router.post('/generate', syllabusController.generateFullController);
 
+// POST /api/syllabus/generate/text        body: { topic }
 router.post('/generate/text', syllabusController.generateTextController);
+
+// POST /api/syllabus/generate/video       body: { topic }
 router.post('/generate/video', syllabusController.generateVideoController);
+
+// GET  /api/syllabus                      all topics for user
 router.get('/', syllabusController.getAllTopicsController);
+
+// GET  /api/syllabus/:syllabusId          get one (syllabusId = UUID)
+
 router.get('/:syllabusId', syllabusController.getSyllabusByIdController);
+
+// PUT  /api/syllabus/:syllabusId          update content
 router.put('/:syllabusId', syllabusController.updateSyllabusController);
+
+// DELETE /api/syllabus/:syllabusId        delete
 router.delete('/:syllabusId', syllabusController.deleteSyllabusController);
 
 export default router;

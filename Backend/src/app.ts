@@ -43,9 +43,6 @@ app.get(
   }));
 
 checkGroqConnection()
-  // .then(() => console.log('Groq check done'))
-  // .catch(console.error);
-
 
 app.use(
   '/api/user',
@@ -67,8 +64,6 @@ app.use(
   dailyChallengeRoutes
 );
 
-
-// listAvailableModels().then(() => console.log('done')).catch(console.error);
 
 app.use(notFound);
 app.use(errorHandler);

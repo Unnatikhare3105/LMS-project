@@ -10,7 +10,7 @@ export const addBookmarkController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { syllabusId } = req.params; // UUID
+    const { syllabusId } = req.params; 
     const { note } = req.body;
 
     if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
@@ -55,7 +55,7 @@ export const updateBookmarkNoteController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { bookmarkId } = req.params; // UUID
+    const { bookmarkId } = req.params; 
     const { note } = req.body;
 
     if (!bookmarkId) return next(new CustomError('Bookmark ID is required.', 400));
@@ -79,7 +79,7 @@ export const removeBookmarkController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { bookmarkId } = req.params; // UUID
+    const { bookmarkId } = req.params; 
     if (!bookmarkId) return next(new CustomError('Bookmark ID is required.', 400));
 
     await bookmarkService.removeBookmark(bookmarkId, req.user.userId);

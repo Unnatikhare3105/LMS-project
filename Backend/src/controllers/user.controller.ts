@@ -24,17 +24,10 @@ export const registerController = async (
       return next(new CustomError('All fields are required.', 400));
     }
 
-    // if (!/^\\d{10}$/.test(mobile)) {
-    //   return next(new CustomError('Invalid phone number. Format: XXXXXXXXXX', 400));
-    // }
 
     const { user, token } = await userService.createUser({ username, email, mobile, password });
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      sameSite: 'none',
-      secure: process.env.NODE_ENV === 'production',
-    });
+
 
     res.status(201).json({
       success: true,
@@ -69,11 +62,7 @@ export const loginByPasswordController = async (
 
     const { user, token } = await userService.loginUser({ email, password });
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      sameSite: 'none',
-      secure: process.env.NODE_ENV === 'production',
-    });
+
 
     res.status(200).json({
       success: true,
@@ -135,11 +124,7 @@ export const verifyOTPController = async (
 
     const token = user.generateAuthToken();
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      sameSite: 'none',
-      secure: process.env.NODE_ENV === 'production',
-    });
+
 
     res.status(200).json({
       success: true,
@@ -171,7 +156,7 @@ export const logoutController = async (
 
     const blacklistKey = `blacklisted:${token}`;
     await redisSet(blacklistKey, 'true', 7 * 24 * 60 * 60);
-   
+
 
     const decoded = jwt.verify(
       token,
@@ -259,27 +244,28 @@ export const verifyForgotPasswordOTPController = async (
   try {
     const { email, otp } = req.body;
     if (!email || !otp) {
-      console.log("Email or OTP missing in request body");
+
       return next(new CustomError('Email and OTP are required.', 400));
     }
 
     const valid = await verifyOTP(email, otp);
     if (!valid) {
-      console.log("OTP verification failed for email:", email);
-      return next(new CustomError('Invalid or expired OTP.', 400));}
 
-    // Allow password reset for 10 minutes
-    // await redis.set(`reset-allowed:${email}`, 'true', { EX: 10 * 60 });
+      return next(new CustomError('Invalid or expired OTP.', 400));
+    }
+
+
+
     await redisSet(`reset-allowed:${email}`, 'true', 10 * 60);
 
-    console.log("OTP verified successfully for email:", email);
+
 
     res.status(200).json({
       success: true,
       message: 'OTP verified. You may now reset your password.',
     });
   } catch (error) {
-    console.log("Error during OTP verification:", error);
+
     res.status(500).json({ success: false, message: `Internal server error. ${error}` });
     next(error);
   }
@@ -298,12 +284,8 @@ export const resetPasswordController = async (
       return next(new CustomError('Email and new password are required.', 400));
     }
 
-    // const allowed = await redis.get(`reset-allowed:${email}`);
-
     await redisDel(`reset-allowed:${email}`);
-    // if (!allowed) {
-    //   return next(new CustomError('OTP verification required before resetting password.', 403));
-    // }
+
 
     const hashed = await UserModel.hashPassword(newPassword);
     const user = await userRepo.updatePassword(email, hashed);
@@ -315,11 +297,7 @@ export const resetPasswordController = async (
     if (!fullUser) return next(new CustomError('User not found.', 404));
     const token = fullUser.generateAuthToken();
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      sameSite: 'none',
-      secure: process.env.NODE_ENV === 'production',
-    });
+
 
     res.status(200).json({ success: true, message: 'Password reset successfully.', token });
   } catch (error) {

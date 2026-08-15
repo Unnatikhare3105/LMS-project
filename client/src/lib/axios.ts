@@ -9,12 +9,10 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: API_TIMEOUT_MS,
-  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
 // ─── AI instance (syllabus generation, quiz generation, daily challenge) ──────
-// Separate instance with much longer timeout since Gemini calls can be slow
 export const aiClient = axios.create({
   baseURL: BASE_URL,
   timeout: AI_TIMEOUT_MS,

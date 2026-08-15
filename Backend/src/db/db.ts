@@ -14,7 +14,7 @@ export const connectDB = async (): Promise<void> => {
 
     await mongoose.connect(config.DB_URL, {
       serverSelectionTimeoutMS: 5000,
-      maxPoolSize: 20,           // handle up to ~1000 concurrent users
+      maxPoolSize: 20,          
       minPoolSize: 5,
       socketTimeoutMS: 45000,
       family: 4,

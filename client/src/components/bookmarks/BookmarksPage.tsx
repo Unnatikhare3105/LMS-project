@@ -126,21 +126,6 @@ export default function BookmarksPage() {
   };
   
 
-  // const filtered = localBookmarks.filter((b) => {
-  //   const matchSearch = b.topic.toLowerCase().includes(search.toLowerCase()) || b.note.toLowerCase().includes(search.toLowerCase());
-  //   const matchFilter = filter === 'all' || b.contentType === filter;
-  //   return matchSearch && matchFilter;
-  // });
-
-  // const handleDelete = (id: string) => {
-  //   setLocalBookmarks((prev) => prev.filter((b) => b.bookmarkId !== id));
-  //   toast.success('Bookmark removed.');
-  // };
-
-  // const handleUpdateNote = (id: string, note: string) => {
-  //   setLocalBookmarks((prev) => prev.map((b) => b.bookmarkId === id ? { ...b, note } : b));
-  // };
-
   return (
     <AppShell title="Bookmarks">
       {/* Controls */}

@@ -10,11 +10,9 @@ const DAILY_QUESTIONS = 5;
 export const getTodayChallenge = async (): Promise<IDailyChallenge> => {
   const today = new Date().toISOString().split('T')[0];
 
-  // Return existing if already generated today
   const existing = await challengeRepo.findChallengeByDate(today);
   if (existing) return existing;
 
-  // Generate fresh challenge
   const topic = await aiService.getDailyChallengeTopic();
   const questions = await aiService.generateQuestionsByAI(topic, DAILY_QUESTIONS, 'intermediate');
 

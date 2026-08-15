@@ -74,7 +74,7 @@ export const recordActivity = async (
     userId: string
 ): Promise<void> => {
     const today = new Date().toISOString().split('T')[0];
-    // const user = await UserModel.findById(userId).exec();
+    
     const user = await UserModel.findOne({ userId }).exec();
     if (!user) return;
 

@@ -14,7 +14,7 @@ export const generateQuizController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { syllabusId } = req.params; // UUID
+    const { syllabusId } = req.params; 
     const { numQuestions, difficulty } = req.body;
 
     if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
@@ -63,7 +63,7 @@ export const submitQuizController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { quizId } = req.params; // UUID
+    const { quizId } = req.params; 
     const { score, timeTakenSeconds } = req.body;
 
     if (!quizId) return next(new CustomError('Quiz ID is required.', 400));
@@ -109,7 +109,7 @@ export const getQuizzesByTopicController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { syllabusId } = req.params; // UUID
+    const { syllabusId } = req.params; 
     if (!syllabusId) return next(new CustomError('Syllabus ID is required.', 400));
 
     const quizzes = await quizService.getQuizzesByTopic(syllabusId);
@@ -125,7 +125,7 @@ export const getQuizByIdController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { quizId } = req.params; // UUID
+    const { quizId } = req.params; 
     if (!quizId) return next(new CustomError('Quiz ID is required.', 400));
 
     const quiz = await quizService.getQuizByPublicId(quizId, req.user.userId);
@@ -155,7 +155,7 @@ export const deleteQuizController = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { quizId } = req.params; // UUID
+    const { quizId } = req.params; 
     if (!quizId) return next(new CustomError('Quiz ID is required.', 400));
 
     await quizService.deleteQuiz(quizId, req.user.userId);

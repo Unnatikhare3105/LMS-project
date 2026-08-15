@@ -8,38 +8,25 @@ import { ISyllabus } from '../models/syllabus.model';
 
 // ─── Generate full content (text + video) ───────────────────────────────────────
 
-// export const generateFullContent = async ({
-//   topic,
-//   userId,
-// }: {
-//   topic: string;
-//   userId: string;
-// }): Promise<ISyllabus> => {
-//   const existing = await syllabusRepo.findSyllabusByUserAndTopic(userId, topic);
-//   if (existing && existing.content && existing.videoLinks?.length) return existing;
+export const generateFullContent = async ({ topic, userId }: { topic: string; userId: string }): Promise<ISyllabus> => {
+  const existing = await syllabusRepo.findSyllabusByUserAndTopic(userId, topic);
+  if (existing && existing.content && existing.videoLinks?.length) return existing;
 
-//   const [content, videos, references] = await Promise.all([
-//     aiService.getDetailedExplanation(topic),
-//     aiService.getVideoLinks(topic),
-//     aiService.getReferenceLinks(topic),
-//   ]);
+  const [content, videos, references] = await Promise.all([
+    aiService.getDetailedExplanation(topic),
+    aiService.getVideoLinks(topic),
+    aiService.getReferenceLinks(topic),
+  ]);
+  if (!content) throw new CustomError('AI returned no content.', 500);
+  if (!videos || videos.length === 0) throw new CustomError('No videos found for this topic.', 404);
 
-//   if (!content) throw new CustomError('AI returned no content.', 500);
-//   if (!videos || videos.length === 0) throw new CustomError('No videos found for this topic.', 404);
+  const syllabus = await syllabusRepo.upsertFullSyllabus({ userId, topic, content, videoLinks: videos, referenceLinks: references });
 
-//   const syllabus = await syllabusRepo.upsertFullSyllabus({
-//     userId,
-//     topic,
-//     content,
-//     videoLinks: videos,
-//     referenceLinks: references,
-//   });
-
-//   userRepo.recordActivity(userId).catch(() => { });
-//   userRepo.incrementTopicCount(userId).catch(() => { });
-
-//   return syllabus;
-// };
+  userRepo.recordActivity(userId).catch(() => {});
+  userRepo.incrementTopicCount(userId).catch(() => {});
+  return syllabus;
+};
+// ─── Generate text content ────────────────────────────────────────────────────
 
 export const generateContentAsText = async ({ topic, userId }: { topic: string; userId: string }): Promise<ISyllabus> => {
   const existing = await syllabusRepo.findSyllabusByUserAndTopic(userId, topic);
@@ -62,6 +49,8 @@ export const generateContentAsText = async ({ topic, userId }: { topic: string; 
   userRepo.incrementTopicCount(userId).catch(() => {});
   return syllabus;
 };
+
+// ─── Generate video content ───────────────────────────────────────────────────
 
 export const generateContentAsVideo = async ({ topic, userId }: { topic: string; userId: string }): Promise<ISyllabus> => {
   const existing = await syllabusRepo.findSyllabusByUserAndTopic(userId, topic);
@@ -87,166 +76,6 @@ export const generateContentAsVideo = async ({ topic, userId }: { topic: string;
   userRepo.incrementTopicCount(userId).catch(() => {});
   return syllabus;
 };
-
-export const generateFullContent = async ({ topic, userId }: { topic: string; userId: string }): Promise<ISyllabus> => {
-  const existing = await syllabusRepo.findSyllabusByUserAndTopic(userId, topic);
-  if (existing && existing.content && existing.videoLinks?.length) return existing;
-
-  const [content, videos, references] = await Promise.all([
-    aiService.getDetailedExplanation(topic),
-    aiService.getVideoLinks(topic),
-    aiService.getReferenceLinks(topic),
-  ]);
-  if (!content) throw new CustomError('AI returned no content.', 500);
-  if (!videos || videos.length === 0) throw new CustomError('No videos found for this topic.', 404);
-
-  const syllabus = await syllabusRepo.upsertFullSyllabus({ userId, topic, content, videoLinks: videos, referenceLinks: references });
-
-  userRepo.recordActivity(userId).catch(() => {});
-  userRepo.incrementTopicCount(userId).catch(() => {});
-  return syllabus;
-};
-// ─── Generate text content ────────────────────────────────────────────────────
-
-// export const generateContentAsText = async ({
-//   topic,
-//   userId,
-// }: {
-//   topic: string;
-//   userId: string;
-// }): Promise<ISyllabus> => {
-//   // Return cached version if already generated for this user + topic
-//   const existing = await syllabusRepo.findSyllabusByUserAndTopic(userId, topic);
-//   if (existing && existing.content) return existing;
-
-//   const content = await aiService.getDetailedExplanation(topic);
-//   if (!content) throw new CustomError('AI returned no content.', 500);
-
-//   const syllabus = await syllabusRepo.createTextSyllabus({ userId, topic, content });
-
-//   // Fire and forget – non-blocking activity tracking
-//   userRepo.recordActivity(userId).catch(() => { });
-//   userRepo.incrementTopicCount(userId).catch(() => { });
-
-//   return syllabus;
-// };
-
-// export const generateContentAsText = async ({
-//   topic,
-//   userId,
-// }: {
-//   topic: string;
-//   userId: string;
-// }): Promise<ISyllabus> => {
-//   const existing = await syllabusRepo.findSyllabusByUserAndTopic(userId, topic);
-//   if (existing && existing.content) return existing;
-
-//   const content = await aiService.getDetailedExplanation(topic);
-//   if (!content) throw new CustomError('AI returned no content.', 500);
-
-//   let syllabus: ISyllabus;
-
-//   if (existing) {
-//     // Video-only record already exists for this topic — merge text into it
-//     const newType = existing.videoLinks?.length ? 'both' : 'text';
-//     const updated = await syllabusRepo.updateSyllabusContentAndType(existing.syllabusId, content, newType);
-//     if (!updated) throw new CustomError('Failed to update syllabus.', 500);
-//     syllabus = updated;
-//   } else {
-//     syllabus = await syllabusRepo.createTextSyllabus({ userId, topic, content });
-//   }
-
-//   userRepo.recordActivity(userId).catch(() => { });
-//   userRepo.incrementTopicCount(userId).catch(() => { });
-
-//   return syllabus;
-// };
-
-// ─── Generate video content ───────────────────────────────────────────────────
-
-// export const generateContentAsVideo = async ({
-//   topic,
-//   userId,
-// }: {
-//   topic: string;
-//   userId: string;
-// }): Promise<ISyllabus> => {
-//   const [videos, references] = await Promise.all([
-//     aiService.getVideoLinks(topic),
-//     aiService.getReferenceLinks(topic),
-//   ]);
-
-//   if (!videos || videos.length === 0) {
-//     throw new CustomError('No videos found for this topic.', 404);
-//   }
-
-//   const syllabus = await syllabusRepo.createVideoSyllabus({
-//     userId,
-//     topic,
-//     videoLinks: videos,
-//     referenceLinks: references,
-//   });
-
-//   // export const generateContentAsVideo = async ({
-//   //   topic,
-//   //   userId,
-//   // }: {
-//   //   topic: string;
-//   //   userId: string;
-//   // }): Promise<ISyllabus> => {
-//   //   const videos = await aiService.getVideoLinks(topic);
-//   //   if (!videos || videos.length === 0) {
-//   //     throw new CustomError('No videos found for this topic.', 404);
-//   //   }
-
-//   //   const syllabus = await syllabusRepo.createVideoSyllabus({
-//   //     userId,
-//   //     topic,
-//   //     videoLinks: videos,
-//   //   });
-
-//   userRepo.recordActivity(userId).catch(() => { });
-//   userRepo.incrementTopicCount(userId).catch(() => { });
-
-//   return syllabus;
-// };
-
-// export const generateContentAsVideo = async ({
-//   topic,
-//   userId,
-// }: {
-//   topic: string;
-//   userId: string;
-// }): Promise<ISyllabus> => {
-//   const existing = await syllabusRepo.findSyllabusByUserAndTopic(userId, topic);
-//   if (existing && existing.videoLinks?.length) return existing;
-
-//   const [videos, references] = await Promise.all([
-//     aiService.getVideoLinks(topic),
-//     aiService.getReferenceLinks(topic),
-//   ]);
-
-//   if (!videos || videos.length === 0) {
-//     throw new CustomError('No videos found for this topic.', 404);
-//   }
-
-//   let syllabus: ISyllabus;
-
-//   if (existing) {
-//     // Text-only record already exists for this topic — merge videos into it
-//     const newType = existing.content ? 'both' : 'video';
-//     const updated = await syllabusRepo.updateSyllabusVideos(existing.syllabusId, videos, references, newType);
-//     if (!updated) throw new CustomError('Failed to update syllabus.', 500);
-//     syllabus = updated;
-//   } else {
-//     syllabus = await syllabusRepo.createVideoSyllabus({ userId, topic, videoLinks: videos, referenceLinks: references });
-//   }
-
-//   userRepo.recordActivity(userId).catch(() => { });
-//   userRepo.incrementTopicCount(userId).catch(() => { });
-
-//   return syllabus;
-// };
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
 

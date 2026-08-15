@@ -14,7 +14,7 @@ export default function Header({ title }: HeaderProps) {
 
   const streak = useAppSelector((s) => s.auth.user?.streak.current ?? 0);
 
-  console.log('auth.user in layout header' , useAppSelector((s) => s.auth.user))
+ 
   return (
     <header className="h-16 flex items-center justify-between px-6 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 sticky top-0 z-30">
       <div className="flex items-center gap-4">

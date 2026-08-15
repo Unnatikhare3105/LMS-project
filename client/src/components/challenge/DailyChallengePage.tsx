@@ -39,8 +39,7 @@ function Countdown() {
 }
 
 export default function DailyChallengePage() {
-  // const { todayChallenge } = useAppSelector((s) => s.dailyChallenge);
-  const { today: todayChallenge, loading } = useAppSelector((s) => s.dailyChallenge);
+ const { today: todayChallenge, loading } = useAppSelector((s) => s.dailyChallenge);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);

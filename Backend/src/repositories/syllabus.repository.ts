@@ -44,7 +44,6 @@ export const searchSyllabusByTopic = async (
     .exec();
 };
 
-// Resolves syllabusId → internal ObjectId (used internally by services)
 export const getObjectIdBySyllabusId = async (
   syllabusId: string
 ): Promise<mongoose.Types.ObjectId | null> => {
@@ -78,19 +77,6 @@ export const createVideoSyllabus = async (data: {
   });
 };
 
-// export const createVideoSyllabus = async (data: {
-//   userId: string;
-//   topic: string;
-//   videoLinks: IVideoLink[];
-// }): Promise<ISyllabus> => {
-//   return SyllabusModel.create({
-//     userId: data.userId,
-//     topic: data.topic,
-//     content: '',
-//     videoLinks: data.videoLinks,
-//     contentType: 'video',
-//   });
-// };
 
 export const updateSyllabusContent = async (
   syllabusId: string,
@@ -107,52 +93,6 @@ export const deleteSyllabusBySyllabusId = async (syllabusId: string): Promise<bo
   const result = await SyllabusModel.findOneAndDelete({ syllabusId }).exec();
   return !!result;
 };
-
-// export const updateSyllabusContentAndType = async (
-//   syllabusId: string,
-//   content: string,
-//   contentType: 'text' | 'both'
-// ): Promise<ISyllabus | null> => {
-//   return SyllabusModel.findOneAndUpdate(
-//     { syllabusId },
-//     { $set: { content, contentType } },
-//     { new: true }
-//   ).exec();
-// };
-
-// export const updateSyllabusVideos = async (
-//   syllabusId: string,
-//   videoLinks: IVideoLink[],
-//   referenceLinks: IReferenceLink[],
-//   contentType: 'video' | 'both'
-// ): Promise<ISyllabus | null> => {
-//   return SyllabusModel.findOneAndUpdate(
-//     { syllabusId },
-//     { $set: { videoLinks, referenceLinks, contentType } },
-//     { new: true }
-//   ).exec();
-// };
-
-// export const upsertFullSyllabus = async (data: {
-//   userId: string;
-//   topic: string;
-//   content: string;
-//   videoLinks: IVideoLink[];
-//   referenceLinks: IReferenceLink[];
-// }): Promise<ISyllabus> => {
-//   return SyllabusModel.findOneAndUpdate(
-//     { userId: data.userId, topic: data.topic },
-//     {
-//       $set: {
-//         content: data.content,
-//         videoLinks: data.videoLinks,
-//         referenceLinks: data.referenceLinks,
-//         contentType: 'both',
-//       },
-//     },
-//     { new: true, upsert: true }
-//   ).exec();
-// };
 
 export const updateSyllabusContentAndType = async (
   syllabusId: string,
