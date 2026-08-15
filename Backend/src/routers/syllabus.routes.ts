@@ -3,19 +3,20 @@
 import express from 'express';
 import * as syllabusController from '../controllers/syllabus.controller';
 import { authUser } from '../middlewares/auth.middleware';
+import {aiLimiter} from '../middlewares/rateLimiter.middleware';
 
 const router = express.Router();
 
 router.use(authUser);
 
 // POST /api/syllabus/generate             body: { topic }
-router.post('/generate', syllabusController.generateFullController);
+router.post('/generate', aiLimiter, syllabusController.generateFullController);
 
 // POST /api/syllabus/generate/text        body: { topic }
-router.post('/generate/text', syllabusController.generateTextController);
+router.post('/generate/text', aiLimiter, syllabusController.generateTextController);
 
 // POST /api/syllabus/generate/video       body: { topic }
-router.post('/generate/video', syllabusController.generateVideoController);
+router.post('/generate/video', aiLimiter, syllabusController.generateVideoController);
 
 // GET  /api/syllabus                      all topics for user
 router.get('/', syllabusController.getAllTopicsController);

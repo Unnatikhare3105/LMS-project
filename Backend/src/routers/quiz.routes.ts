@@ -3,6 +3,7 @@
 import express from 'express';
 import * as quizController from '../controllers/quiz.controller';
 import { authUser } from '../middlewares/auth.middleware';
+import {aiLimiter} from '../middlewares/rateLimiter.middleware';
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router.use(authUser);
 router.get('/leaderboard', quizController.getLeaderboardController);
 
 // POST /api/quiz/generate/:syllabusId          generate quiz  (syllabusId = UUID)
-router.post('/generate/:syllabusId', quizController.generateQuizController);
+router.post('/generate/:syllabusId', aiLimiter, quizController.generateQuizController);
 
 // GET  /api/quiz                               all quizzes for user
 router.get('/', quizController.getAllQuizzesController);

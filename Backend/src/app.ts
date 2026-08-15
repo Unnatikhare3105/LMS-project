@@ -12,6 +12,8 @@ import bookmarkRoutes from './routers/bookmark.routes';
 import dailyChallengeRoutes from './routers/dailyChallenge.routes';
 import { errorHandler, notFound } from '@middlewares/error.middleware';
 import { checkGroqConnection } from '@services/ai.service';
+import { generalLimiter } from '@middlewares/rateLimiter.middleware';
+
 
 const app = express();
 
@@ -30,10 +32,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
-}));
+app.use(generalLimiter);
 
 app.get(
   '/health',
